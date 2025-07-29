@@ -4,22 +4,18 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
-from capture_api import ImplyAPICapture
+from capture_direct import DirectDashboardCapture
 
 
 def main():
     # 환경 변수 로드
     load_dotenv()
     
-    # 필수 환경 변수 확인
-    imply_base_url = os.getenv('IMPLY_BASE_URL')
-    username = os.getenv('IMPLY_USERNAME')
-    password = os.getenv('IMPLY_PASSWORD')
+    # 대시보드 URL 확인
     dashboard_urls = os.getenv('DASHBOARD_URLS', os.getenv('DASHBOARD_URL', ''))
     
-    if not all([imply_base_url, username, password, dashboard_urls]):
-        print("Missing required environment variables. Please check your .env file.")
-        print("Required: IMPLY_BASE_URL, IMPLY_USERNAME, IMPLY_PASSWORD, DASHBOARD_URLS (or DASHBOARD_URL)")
+    if not dashboard_urls:
+        print("Missing DASHBOARD_URLS (or DASHBOARD_URL) in .env file")
         sys.exit(1)
     
     # 대시보드 URL 리스트 처리
@@ -35,17 +31,28 @@ def main():
         print("No valid dashboard URLs found.")
         sys.exit(1)
     
-    print(f"Found {len(url_list)} dashboard(s) to capture")
-    print("\n⚠️  WARNING: This is an API-based capture method.")
-    print("   It may not work for all dashboards, especially those requiring JavaScript rendering.")
-    print("   Use the browser-based capture for better results.\n")
+    print(f"Found {len(url_list)} dashboard(s) to analyze")
+    print("\n" + "="*70)
+    print("⚠️  IMPORTANT NOTICE:")
+    print("This tool CANNOT capture actual dashboard screenshots without a browser.")
+    print("It only checks if the URLs are accessible and creates info images.")
+    print("For real screenshots, use the browser-based version in the parent directory.")
+    print("="*70 + "\n")
+    
+    # 선택적 인증 정보
+    session_cookie = os.getenv('SESSION_COOKIE')
+    auth_token = os.getenv('AUTH_TOKEN')
+    
+    if session_cookie or auth_token:
+        print("Using provided authentication credentials")
+    else:
+        print("No authentication credentials provided - direct access only")
     
     try:
         # 캡처 객체 생성
-        capture = ImplyAPICapture(
-            base_url=imply_base_url,
-            username=username,
-            password=password,
+        capture = DirectDashboardCapture(
+            session_cookie=session_cookie,
+            auth_token=auth_token,
             config={
                 'screenshot_dir': os.getenv('SCREENSHOT_DIR', './screenshots'),
                 'format': os.getenv('SCREENSHOT_FORMAT', 'png'),
@@ -53,24 +60,29 @@ def main():
             }
         )
         
-        # 대시보드 캡처
+        # 대시보드 처리
         if len(url_list) == 1:
             # 단일 대시보드
-            print(f"Capturing single dashboard: {url_list[0]}")
+            print(f"Analyzing dashboard: {url_list[0]}")
             result = capture.capture_dashboard(url_list[0])
-            print(f"\nCapture result:")
+            
+            print(f"\nResult:")
             if result['success']:
-                print(f"✅ Success: {result['dashboard_name']} -> {result['filepath']}")
+                print(f"✅ Info saved: {result['filepath']}")
+                if 'info' in result:
+                    print("\nAccess Information:")
+                    for key, value in result['info'].items():
+                        print(f"  {key}: {value}")
             else:
-                print(f"❌ Failed: {result['dashboard_name']} - {result.get('error', 'Unknown error')}")
+                print(f"❌ Failed: {result.get('error', 'Unknown error')}")
         else:
             # 여러 대시보드
-            print(f"Capturing {len(url_list)} dashboards...")
+            print(f"Analyzing {len(url_list)} dashboards...")
             results = capture.capture_multiple_dashboards(url_list)
             
             # 결과 요약
             print(f"\n{'='*50}")
-            print("CAPTURE SUMMARY")
+            print("ANALYSIS SUMMARY")
             print(f"{'='*50}")
             
             success_count = sum(1 for r in results if r['success'])
