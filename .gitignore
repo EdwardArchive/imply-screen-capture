@@ -1,0 +1,10 @@
+# Environment variables
+.env
+# Screenshots
+screenshots/
+*.png
+*.jpg
+*.jpeg
+# Else
+.claude/
+__pycache__/
