@@ -1,0 +1,7 @@
+beautifulsoup4==4.12.3
+requests==2.32.3
+urllib3==2.2.1
+imgkit==1.2.3
+pdfkit==1.0.0
+python-dotenv==1.0.1
+html2image==2.0.4.3
